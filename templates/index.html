@@ -1,0 +1,647 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - AI Classroom Entry Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Dashboard
+            </h1>
+            <p class="text-muted">Monitor classroom entry and manage security alerts</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card">
+                <div class="card-body">
+                    <h3>{{ total_students }}</h3>
+                    <p><i class="fas fa-users me-2"></i>Active Students</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="card-body">
+                    <h3>{{ today_entries }}</h3>
+                    <p><i class="fas fa-calendar-day me-2"></i>Today's Entries</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body">
+                    <h3>{{ active_alerts|length }}</h3>
+                    <p><i class="fas fa-exclamation-triangle me-2"></i>Active Alerts</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card stats-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="card-body">
+                    <h3 id="monitoring-status-text">
+                        {% if monitoring_active %}ON{% else %}OFF{% endif %}
+                    </h3>
+                    <p><i class="fas fa-video me-2"></i>Monitoring Status</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Camera Feed Section -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-video me-2"></i>
+                        Live Camera Feed
+                    </h5>
+                    <div>
+                        <button id="start-monitoring" class="btn btn-success btn-sm me-2">
+                            <i class="fas fa-play me-1"></i>Start Monitoring
+                        </button>
+                        <button id="stop-monitoring" class="btn btn-danger btn-sm">
+                            <i class="fas fa-stop me-1"></i>Stop Monitoring
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="camera-container">
+                        <div class="camera-placeholder">
+                            <i class="fas fa-camera"></i>
+                            <h4>Camera Feed</h4>
+                            <p>Click "Start Monitoring" to begin face detection</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        Control Panel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2 mb-3">
+                        <a href="{{ url_for('add_student') }}" class="btn btn-primary">
+                            <i class="fas fa-user-plus me-2"></i>Add New Student
+                        </a>
+                        <a href="{{ url_for('students') }}" class="btn btn-info">
+                            <i class="fas fa-users me-2"></i>Manage Students
+                        </a>
+                        <a href="{{ url_for('entry_logs') }}" class="btn btn-secondary">
+                            <i class="fas fa-list me-2"></i>View Entry Logs
+                        </a>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>System Controls</h6>
+                    <div class="d-grid gap-2 mb-3">
+                        <button id="clear-alerts-btn" class="btn btn-outline-warning btn-sm">
+                            <i class="fas fa-broom me-2"></i>Clear Resolved Alerts
+                        </button>
+                        <button id="system-reset-btn" class="btn btn-outline-danger btn-sm">
+                            <i class="fas fa-refresh me-2"></i>System Reset
+                        </button>
+                        <button id="clear-all-data-btn" class="btn btn-outline-dark btn-sm">
+                            <i class="fas fa-trash-alt me-2"></i>Clear All Data
+                        </button>
+                    </div>
+                    
+                    <hr>
+                    
+                    <h6>System Status</h6>
+                    <div class="mb-2">
+                        <span class="badge bg-success">Database Connected</span>
+                    </div>
+                    <div class="mb-2">
+                        <span class="badge bg-info">AI Service Ready</span>
+                    </div>
+                    <div class="mb-2">
+                        <span id="camera-status" class="badge bg-warning">Camera Disconnected</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Row -->
+    <div class="row">
+        <!-- Recent Entries -->
+        <div class="col-lg-8 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>
+                        Recent Entries
+                    </h5>
+                    <a href="{{ url_for('entry_logs') }}" class="btn btn-outline-primary btn-sm">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if recent_entries %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Student</th>
+                                        <th>Status</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in recent_entries[:5] %}
+                                    <tr>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ entry.entry_time.strftime('%H:%M:%S') if entry.entry_time else 'N/A' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            {% if entry.student %}
+                                                <strong>{{ entry.student.name }}</strong>
+                                                <br><small class="text-muted">{{ entry.student.student_id }}</small>
+                                            {% else %}
+                                                <span class="text-danger">Unknown Person</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if entry.is_recognized %}
+                                                <span class="status-badge status-recognized">
+                                                    <i class="fas fa-check me-1"></i>Recognized
+                                                </span>
+                                            {% else %}
+                                                <span class="status-badge status-unknown">
+                                                    <i class="fas fa-exclamation me-1"></i>Unknown
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if entry.confidence_score %}
+                                                <div class="progress" style="height: 8px;">
+                                                    <div class="progress-bar" style="width: {{ (entry.confidence_score * 100)|round }}%"></div>
+                                                </div>
+                                                <small>{{ "%.1f"|format(entry.confidence_score * 100) }}%</small>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                            <p class="text-muted">No recent entries found</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Alerts -->
+        <div class="col-lg-4 mb-4">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Active Alerts
+                    </h5>
+                    <a href="{{ url_for('alerts') }}" class="btn btn-outline-danger btn-sm">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if active_alerts %}
+                        {% for alert in active_alerts[:3] %}
+                        <div class="alert alert-{{ 'danger' if alert.severity == 'high' else 'warning' if alert.severity == 'medium' else 'info' }} alert-dismissible fade show" role="alert">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ alert.alert_type.replace('_', ' ').title() }}</strong>
+                                    <p class="mb-1 small">{{ alert.message }}</p>
+                                    <small class="text-muted">{{ alert.created_at.strftime('%H:%M:%S') if alert.created_at else 'N/A' }}</small>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary resolve-alert" data-alert-id="{{ alert.id }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                            <p class="text-muted mb-0">No active alerts</p>
+                            <small class="text-success">System running normally</small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let cameraInterval;
+    let monitoringActive = false;
+
+    // Start monitoring
+    document.getElementById('start-monitoring').addEventListener('click', function() {
+        fetch('/start_monitoring', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    monitoringActive = true;
+                    document.getElementById('camera-status').textContent = 'Camera Connected';
+                    document.getElementById('camera-status').className = 'badge bg-success';
+                    document.getElementById('monitoring-status-text').textContent = 'ON';
+                    
+                    // Start camera feed updates
+                    startCameraFeed();
+                    
+                    // Show success message
+                    showAlert('success', data.message);
+                } else {
+                    showAlert('danger', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Failed to start monitoring');
+            });
+    });
+
+    // Stop monitoring
+    document.getElementById('stop-monitoring').addEventListener('click', function() {
+        fetch('/stop_monitoring', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    monitoringActive = false;
+                    document.getElementById('camera-status').textContent = 'Camera Disconnected';
+                    document.getElementById('camera-status').className = 'badge bg-warning';
+                    document.getElementById('monitoring-status-text').textContent = 'OFF';
+                    
+                    // Stop camera feed updates
+                    stopCameraFeed();
+                    
+                    // Show placeholder
+                    document.getElementById('camera-container').innerHTML = `
+                        <div class="camera-placeholder">
+                            <i class="fas fa-camera"></i>
+                            <h4>Camera Feed</h4>
+                            <p>Click "Start Monitoring" to begin face detection</p>
+                        </div>
+                    `;
+                    
+                    showAlert('info', data.message);
+                } else {
+                    showAlert('danger', data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('danger', 'Failed to stop monitoring');
+            });
+    });
+
+    // Start camera feed updates
+    function startCameraFeed() {
+        cameraInterval = setInterval(function() {
+            if (monitoringActive) {
+                fetch('/get_camera_frame')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success' && data.frame) {
+                            const cameraContainer = document.getElementById('camera-container');
+                            cameraContainer.innerHTML = `
+                                <div class="camera-feed position-relative">
+                                    <img src="data:image/jpeg;base64,${data.frame}" alt="Camera Feed"
+                                         style="width: 100%; height: auto; max-height: 400px; object-fit: cover;" />
+                                    <div class="position-absolute top-0 start-0 m-2">
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-video me-1"></i>LIVE
+                                        </span>
+                                    </div>
+                                    <div class="position-absolute top-0 end-0 m-2">
+                                        <span class="badge bg-info">
+                                            ${new Date().toLocaleTimeString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (data.status === 'error') {
+                            console.error('Camera error:', data.message);
+                            document.getElementById('camera-container').innerHTML = `
+                                <div class="camera-placeholder">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                    <h4>Camera Error</h4>
+                                    <p>${data.message}</p>
+                                </div>
+                            `;
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Camera feed error:', error);
+                        monitoringActive = false;
+                        stopCameraFeed();
+                        document.getElementById('camera-container').innerHTML = `
+                            <div class="camera-placeholder">
+                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                                <h4>Connection Lost</h4>
+                                <p>Camera feed disconnected. Please restart monitoring.</p>
+                            </div>
+                        `;
+                    });
+            }
+        }, 500); // Faster updates for better real-time feel
+    }
+
+    // Stop camera feed updates
+    function stopCameraFeed() {
+        if (cameraInterval) {
+            clearInterval(cameraInterval);
+            cameraInterval = null;
+        }
+    }
+
+    // Resolve alert
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.resolve-alert')) {
+            const alertId = e.target.closest('.resolve-alert').dataset.alertId;
+            
+            fetch(`/resolve_alert/${alertId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        e.target.closest('.alert').remove();
+                        showAlert('success', 'Alert resolved');
+                    } else {
+                        showAlert('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Failed to resolve alert');
+                });
+        }
+    });
+
+    // Show alert message
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        // Insert at the top of main content
+        const mainContent = document.querySelector('.main-content');
+        mainContent.insertBefore(alertDiv, mainContent.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.querySelector('.btn-close').click();
+            }
+        }, 5000);
+    }
+
+    // Update dashboard stats in real-time
+    function updateDashboardStats() {
+        fetch('/dashboard_stats')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const stats = data.data;
+                    
+                    // Update statistics cards
+                    document.querySelector('.stats-card h3').textContent = stats.total_students;
+                    document.querySelectorAll('.stats-card h3')[1].textContent = stats.today_entries;
+                    document.querySelectorAll('.stats-card h3')[2].textContent = stats.active_alerts_count;
+                    
+                    // Update monitoring status
+                    const monitoringStatusText = document.getElementById('monitoring-status-text');
+                    if (monitoringStatusText) {
+                        monitoringStatusText.textContent = stats.monitoring_active ? 'ON' : 'OFF';
+                    }
+                    
+                    // Update recent entries table
+                    updateRecentEntriesTable(stats.recent_entries);
+                    
+                    // Update active alerts section
+                    updateActiveAlerts(stats.active_alerts);
+                }
+            })
+            .catch(error => console.error('Error updating dashboard stats:', error));
+    }
+    
+    function updateRecentEntriesTable(entries) {
+        const tbody = document.querySelector('.table tbody');
+        if (!tbody || entries.length === 0) return;
+        
+        tbody.innerHTML = '';
+        entries.slice(0, 5).forEach(entry => {
+            const row = document.createElement('tr');
+            const entryTime = entry.entry_time ? new Date(entry.entry_time).toLocaleTimeString() : 'N/A';
+            const studentName = entry.student_name || 'Unknown Person';
+            const studentId = entry.student_id ? `<br><small class="text-muted">${entry.student_id}</small>` : '';
+            const statusBadge = entry.is_recognized
+                ? '<span class="status-badge status-recognized"><i class="fas fa-check me-1"></i>Recognized</span>'
+                : '<span class="status-badge status-unknown"><i class="fas fa-exclamation me-1"></i>Unknown</span>';
+            const confidence = entry.confidence_score
+                ? `<div class="progress" style="height: 8px;"><div class="progress-bar" style="width: ${Math.round(entry.confidence_score * 100)}%"></div></div><small>${(entry.confidence_score * 100).toFixed(1)}%</small>`
+                : '<span class="text-muted">N/A</span>';
+            
+            row.innerHTML = `
+                <td><small class="text-muted">${entryTime}</small></td>
+                <td>${entry.is_recognized ? `<strong>${studentName}</strong>${studentId}` : `<span class="text-danger">${studentName}</span>`}</td>
+                <td>${statusBadge}</td>
+                <td>${confidence}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+    
+    function updateActiveAlerts(alerts) {
+        const alertsContainer = document.querySelector('.col-lg-4 .card-body');
+        if (!alertsContainer) return;
+        
+        if (alerts.length === 0) {
+            alertsContainer.innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-shield-alt fa-2x text-success mb-2"></i>
+                    <p class="text-muted mb-0">No active alerts</p>
+                    <small class="text-success">System running normally</small>
+                </div>
+            `;
+            return;
+        }
+        
+        alertsContainer.innerHTML = '';
+        alerts.slice(0, 3).forEach(alert => {
+            const alertDiv = document.createElement('div');
+            const severityClass = alert.severity === 'high' ? 'danger' : alert.severity === 'medium' ? 'warning' : 'info';
+            const alertTime = alert.created_at ? new Date(alert.created_at).toLocaleTimeString() : 'N/A';
+            
+            alertDiv.className = `alert alert-${severityClass} alert-dismissible fade show`;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>${alert.alert_type.replace('_', ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</strong>
+                        <p class="mb-1 small">${alert.message}</p>
+                        <small class="text-muted">${alertTime}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-secondary resolve-alert" data-alert-id="${alert.id}">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+            `;
+            alertsContainer.appendChild(alertDiv);
+        });
+    }
+    
+    // Update dashboard stats every 5 seconds
+    updateDashboardStats();
+    setInterval(updateDashboardStats, 5000);
+    
+    // Add stop alarm button functionality
+    function addStopAlarmButton() {
+        const controlPanel = document.querySelector('.card-body .d-grid');
+        if (controlPanel && !document.getElementById('stop-alarm-btn')) {
+            const stopAlarmBtn = document.createElement('button');
+            stopAlarmBtn.id = 'stop-alarm-btn';
+            stopAlarmBtn.className = 'btn btn-warning';
+            stopAlarmBtn.innerHTML = '<i class="fas fa-volume-mute me-2"></i>Stop Alarm';
+            stopAlarmBtn.addEventListener('click', function() {
+                fetch('/stop_alarm', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            showAlert('success', data.message);
+                        } else {
+                            showAlert('danger', data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('danger', 'Failed to stop alarm');
+                    });
+            });
+            controlPanel.appendChild(stopAlarmBtn);
+        }
+    }
+    
+    // Add stop alarm button on page load
+    addStopAlarmButton();
+    
+    // Clear alerts functionality
+    document.getElementById('clear-alerts-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to clear all resolved alerts?')) {
+            fetch('/clear_alerts', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert('success', data.message);
+                        updateDashboardStats(); // Refresh stats
+                    } else {
+                        showAlert('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Failed to clear alerts');
+                });
+        }
+    });
+    
+    // System reset functionality
+    document.getElementById('system-reset-btn').addEventListener('click', function() {
+        if (confirm('Are you sure you want to reset the system? This will clear all alerts and entry logs but keep student data.')) {
+            fetch('/system_reset', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert('success', data.message);
+                        // Stop monitoring
+                        monitoringActive = false;
+                        stopCameraFeed();
+                        // Reset UI
+                        document.getElementById('camera-status').textContent = 'Camera Disconnected';
+                        document.getElementById('camera-status').className = 'badge bg-warning';
+                        document.getElementById('monitoring-status-text').textContent = 'OFF';
+                        document.getElementById('camera-container').innerHTML = `
+                            <div class="camera-placeholder">
+                                <i class="fas fa-camera"></i>
+                                <h4>Camera Feed</h4>
+                                <p>Click "Start Monitoring" to begin face detection</p>
+                            </div>
+                        `;
+                        updateDashboardStats(); // Refresh stats
+                    } else {
+                        showAlert('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Failed to reset system');
+                });
+        }
+    });
+    
+    // Clear all data functionality
+    document.getElementById('clear-all-data-btn').addEventListener('click', function() {
+        if (confirm('⚠️ WARNING: This will permanently delete ALL system data including alerts, entry logs, and reset monitoring. Student data will be preserved. Are you absolutely sure?')) {
+            fetch('/clear_all_data', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert('success', data.message);
+                        // Stop monitoring and reset UI
+                        monitoringActive = false;
+                        stopCameraFeed();
+                        document.getElementById('camera-status').textContent = 'Camera Disconnected';
+                        document.getElementById('camera-status').className = 'badge bg-warning';
+                        document.getElementById('monitoring-status-text').textContent = 'OFF';
+                        document.getElementById('camera-container').innerHTML = `
+                            <div class="camera-placeholder">
+                                <i class="fas fa-camera"></i>
+                                <h4>Camera Feed</h4>
+                                <p>Click "Start Monitoring" to begin face detection</p>
+                            </div>
+                        `;
+                        // Refresh all dashboard data
+                        updateDashboardStats();
+                    } else {
+                        showAlert('danger', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Failed to clear all data');
+                });
+        }
+    });
+</script>
+{% endblock %}

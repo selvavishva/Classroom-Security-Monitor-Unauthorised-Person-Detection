@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}Add Student - AI Classroom Entry Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Add New Student
+                    </h1>
+                    <p class="text-muted">Register a new student and create their face profile</p>
+                </div>
+                <a href="{{ url_for('students') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Students
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-id-card me-2"></i>
+                        Student Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data" id="studentForm">
+                        <div class="row">
+                            <!-- Photo Upload Section -->
+                            <div class="col-md-4 mb-4">
+                                <div class="text-center">
+                                    <div class="photo-upload-container">
+                                        <div id="photo-preview" class="mb-3">
+                                            <div class="photo-placeholder">
+                                                <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                                                <p class="text-muted">Upload Student Photo</p>
+                                            </div>
+                                        </div>
+                                        <input type="file" 
+                                               id="photo" 
+                                               name="photo" 
+                                               accept="image/*" 
+                                               required 
+                                               class="form-control"
+                                               style="display: none;">
+                                        <button type="button" 
+                                                class="btn btn-outline-primary btn-sm" 
+                                                onclick="document.getElementById('photo').click()">
+                                            <i class="fas fa-upload me-2"></i>Choose Photo
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Upload a clear front-facing photo for better face recognition
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Form Fields -->
+                            <div class="col-md-8">
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="name" class="form-label">
+                                            <i class="fas fa-user me-2"></i>Full Name *
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="name" 
+                                               name="name" 
+                                               required 
+                                               placeholder="Enter student's full name">
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="student_id" class="form-label">
+                                            <i class="fas fa-id-badge me-2"></i>Student ID *
+                                        </label>
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="student_id" 
+                                               name="student_id" 
+                                               required 
+                                               placeholder="Enter unique student ID">
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="email" class="form-label">
+                                            <i class="fas fa-envelope me-2"></i>Email Address
+                                        </label>
+                                        <input type="email" 
+                                               class="form-control" 
+                                               id="email" 
+                                               name="email" 
+                                               placeholder="student@school.edu">
+                                    </div>
+
+                                    <div class="col-md-6 mb-3">
+                                        <label for="phone" class="form-label">
+                                            <i class="fas fa-phone me-2"></i>Phone Number
+                                        </label>
+                                        <input type="tel" 
+                                               class="form-control" 
+                                               id="phone" 
+                                               name="phone" 
+                                               placeholder="+1 (555) 123-4567">
+                                    </div>
+                                </div>
+
+                                <!-- Instructions -->
+                                <div class="alert alert-info">
+                                    <h6><i class="fas fa-lightbulb me-2"></i>Photo Guidelines:</h6>
+                                    <ul class="mb-0 small">
+                                        <li>Use a clear, well-lit photo</li>
+                                        <li>Student should face the camera directly</li>
+                                        <li>Avoid sunglasses or face coverings</li>
+                                        <li>Supported formats: JPG, PNG, GIF</li>
+                                        <li>Maximum file size: 16MB</li>
+                                    </ul>
+                                </div>
+
+                                <!-- Form Actions -->
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="{{ url_for('students') }}" class="btn btn-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                    <button type="submit" 
+                                            class="btn btn-primary" 
+                                            id="submitBtn">
+                                        <i class="fas fa-save me-2"></i>Add Student
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .photo-upload-container {
+        position: relative;
+    }
+
+    .photo-placeholder {
+        width: 200px;
+        height: 200px;
+        border: 3px dashed #dee2e6;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .photo-placeholder:hover {
+        border-color: var(--primary-color);
+        background-color: #f8f9fa;
+    }
+
+    .photo-preview-img {
+        width: 200px;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 15px;
+        border: 3px solid #dee2e6;
+        margin: 0 auto;
+        display: block;
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    .form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 0.2rem rgba(52, 152, 219, 0.25);
+    }
+
+    .btn {
+        border-radius: 10px;
+        font-weight: 500;
+        padding: 0.75rem 1.5rem;
+    }
+
+    .alert {
+        border-radius: 10px;
+        border: none;
+    }
+
+    .loading-spinner {
+        display: none;
+    }
+
+    .loading .fa-save {
+        display: none;
+    }
+
+    .loading .loading-spinner {
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Photo preview functionality
+    document.getElementById('photo').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        const previewContainer = document.getElementById('photo-preview');
+        
+        if (file) {
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+            if (!validTypes.includes(file.type)) {
+                alert('Please select a valid image file (JPG, PNG, or GIF)');
+                e.target.value = '';
+                return;
+            }
+            
+            // Validate file size (16MB)
+            if (file.size > 16 * 1024 * 1024) {
+                alert('File size must be less than 16MB');
+                e.target.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewContainer.innerHTML = `
+                    <img src="${e.target.result}" 
+                         alt="Preview" 
+                         class="photo-preview-img">
+                `;
+            };
+            reader.readAsDataURL(file);
+        } else {
+            // Reset to placeholder
+            previewContainer.innerHTML = `
+                <div class="photo-placeholder">
+                    <i class="fas fa-camera fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Upload Student Photo</p>
+                </div>
+            `;
+        }
+    });
+
+    // Form submission with loading state
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.classList.add('loading');
+        submitBtn.innerHTML = `
+            <span class="loading-spinner">
+                <i class="fas fa-spinner fa-spin me-2"></i>Processing...
+            </span>
+            <span class="fa-save">
+                <i class="fas fa-save me-2"></i>Add Student
+            </span>
+        `;
+        submitBtn.disabled = true;
+    });
+
+    // Click on placeholder to trigger file input
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.photo-placeholder')) {
+            document.getElementById('photo').click();
+        }
+    });
+
+    // Form validation
+    document.getElementById('studentForm').addEventListener('submit', function(e) {
+        const name = document.getElementById('name').value.trim();
+        const studentId = document.getElementById('student_id').value.trim();
+        const photo = document.getElementById('photo').files[0];
+        
+        if (!name) {
+            e.preventDefault();
+            alert('Please enter the student\'s full name');
+            document.getElementById('name').focus();
+            return;
+        }
+        
+        if (!studentId) {
+            e.preventDefault();
+            alert('Please enter the student ID');
+            document.getElementById('student_id').focus();
+            return;
+        }
+        
+        if (!photo) {
+            e.preventDefault();
+            alert('Please upload a student photo');
+            document.getElementById('photo').click();
+            return;
+        }
+    });
+
+    // Auto-format phone number
+    document.getElementById('phone').addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length >= 6) {
+            value = value.replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+        } else if (value.length >= 3) {
+            value = value.replace(/(\d{3})(\d{0,3})/, '($1) $2');
+        }
+        e.target.value = value;
+    });
+
+    // Generate student ID based on name
+    document.getElementById('name').addEventListener('blur', function(e) {
+        const studentIdField = document.getElementById('student_id');
+        if (!studentIdField.value) {
+            const name = e.target.value.trim();
+            if (name) {
+                const nameParts = name.split(' ');
+                const firstName = nameParts[0] || '';
+                const lastName = nameParts[nameParts.length - 1] || '';
+                const year = new Date().getFullYear();
+                const randomNum = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+                
+                const suggestedId = `${firstName.charAt(0)}${lastName.charAt(0)}${year}${randomNum}`.toUpperCase();
+                studentIdField.value = suggestedId;
+            }
+        }
+    });
+</script>
+{% endblock %}

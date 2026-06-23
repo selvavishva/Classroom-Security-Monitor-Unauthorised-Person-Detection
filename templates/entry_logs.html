@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Entry Logs - AI Classroom Entry Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Entry Logs
+                    </h1>
+                    <p class="text-muted">View detailed entry history and recognition logs</p>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-outline-primary" onclick="exportLogs()">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="refreshLogs()">
+                        <i class="fas fa-sync me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="date_from" class="form-label">From Date</label>
+                            <input type="date" class="form-control" id="date_from" name="date_from" 
+                                   value="{{ request.args.get('date_from', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="date_to" class="form-label">To Date</label>
+                            <input type="date" class="form-control" id="date_to" name="date_to" 
+                                   value="{{ request.args.get('date_to', '') }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Recognition Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Entries</option>
+                                <option value="recognized" {{ 'selected' if request.args.get('status') == 'recognized' }}>
+                                    Recognized Only
+                                </option>
+                                <option value="unknown" {{ 'selected' if request.args.get('status') == 'unknown' }}>
+                                    Unknown Only
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i>Filter
+                            </button>
+                            <a href="{{ url_for('entry_logs') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>Clear
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Entry Logs Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Entry History
+                    </h5>
+                    <span class="badge bg-secondary">
+                        Total: {{ logs.total if logs else 0 }} entries
+                    </span>
+                </div>
+                <div class="card-body p-0">
+                    {% if logs and logs.items %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th width="15%">Date & Time</th>
+                                        <th width="25%">Student</th>
+                                        <th width="15%">Status</th>
+                                        <th width="15%">Confidence</th>
+                                        <th width="20%">Notes</th>
+                                        <th width="10%">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for entry in logs.items %}
+                                    <tr class="entry-row {{ 'table-success' if entry.is_recognized else 'table-warning' }}">
+                                        <td>
+                                            <div class="d-flex flex-column">
+                                                <strong>{{ entry.entry_time.strftime('%m/%d/%Y') if entry.entry_time else 'N/A' }}</strong>
+                                                <small class="text-muted">{{ entry.entry_time.strftime('%H:%M:%S') if entry.entry_time else 'N/A' }}</small>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if entry.student %}
+                                                <div class="d-flex align-items-center">
+                                                    {% if entry.student.photo_path %}
+                                                        <img src="{{ url_for('static', filename=entry.student.photo_path.replace('static/', '')) }}" 
+                                                             alt="{{ entry.student.name }}" 
+                                                             class="rounded-circle me-2"
+                                                             style="width: 40px; height: 40px; object-fit: cover;">
+                                                    {% else %}
+                                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-2" 
+                                                             style="width: 40px; height: 40px;">
+                                                            <i class="fas fa-user text-muted"></i>
+                                                        </div>
+                                                    {% endif %}
+                                                    <div>
+                                                        <strong>{{ entry.student.name }}</strong>
+                                                        <br><small class="text-muted">{{ entry.student.student_id }}</small>
+                                                    </div>
+                                                </div>
+                                            {% else %}
+                                                <div class="d-flex align-items-center">
+                                                    <div class="rounded-circle bg-danger d-flex align-items-center justify-content-center me-2" 
+                                                         style="width: 40px; height: 40px;">
+                                                        <i class="fas fa-question text-white"></i>
+                                                    </div>
+                                                    <div>
+                                                        <strong class="text-danger">Unknown Person</strong>
+                                                        <br><small class="text-muted">Not in database</small>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if entry.is_recognized %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i>Recognized
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation me-1"></i>Unknown
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if entry.confidence_score %}
+                                                <div class="progress mb-1" style="height: 8px;">
+                                                    <div class="progress-bar {{ 'bg-success' if entry.confidence_score > 0.8 else 'bg-warning' if entry.confidence_score > 0.6 else 'bg-danger' }}" 
+                                                         style="width: {{ (entry.confidence_score * 100)|round }}%"></div>
+                                                </div>
+                                                <small class="text-muted">{{ "%.1f"|format(entry.confidence_score * 100) }}%</small>
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">
+                                                {{ entry.notes or 'No additional notes' }}
+                                            </small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <button type="button" 
+                                                        class="btn btn-outline-primary btn-sm" 
+                                                        data-bs-toggle="modal" 
+                                                        data-bs-target="#entryModal{{ entry.id }}"
+                                                        title="View Details">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                {% if entry.image_path %}
+                                                    <button type="button" 
+                                                            class="btn btn-outline-info btn-sm"
+                                                            onclick="viewImage('{{ entry.image_path }}')"
+                                                            title="View Captured Image">
+                                                        <i class="fas fa-image"></i>
+                                                    </button>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Entry Detail Modal -->
+                                    <div class="modal fade" id="entryModal{{ entry.id }}" tabindex="-1">
+                                        <div class="modal-dialog modal-lg">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">
+                                                        <i class="fas fa-info-circle me-2"></i>
+                                                        Entry Details
+                                                    </h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="row">
+                                                        <div class="col-md-6">
+                                                            <dl class="row">
+                                                                <dt class="col-sm-5">Entry Time:</dt>
+                                                                <dd class="col-sm-7">{{ entry.entry_time.strftime('%B %d, %Y at %H:%M:%S') if entry.entry_time else 'N/A' }}</dd>
+                                                                
+                                                                <dt class="col-sm-5">Status:</dt>
+                                                                <dd class="col-sm-7">
+                                                                    {% if entry.is_recognized %}
+                                                                        <span class="badge bg-success">Recognized</span>
+                                                                    {% else %}
+                                                                        <span class="badge bg-warning">Unknown</span>
+                                                                    {% endif %}
+                                                                </dd>
+                                                                
+                                                                <dt class="col-sm-5">Confidence:</dt>
+                                                                <dd class="col-sm-7">
+                                                                    {% if entry.confidence_score %}
+                                                                        {{ "%.2f"|format(entry.confidence_score * 100) }}%
+                                                                    {% else %}
+                                                                        N/A
+                                                                    {% endif %}
+                                                                </dd>
+                                                                
+                                                                <dt class="col-sm-5">Student:</dt>
+                                                                <dd class="col-sm-7">
+                                                                    {% if entry.student %}
+                                                                        {{ entry.student.name }} ({{ entry.student.student_id }})
+                                                                    {% else %}
+                                                                        Unknown Person
+                                                                    {% endif %}
+                                                                </dd>
+                                                            </dl>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            {% if entry.image_path %}
+                                                                <h6>Captured Image:</h6>
+                                                                <img src="{{ url_for('static', filename=entry.image_path.replace('static/', '')) }}" 
+                                                                     alt="Captured Image" 
+                                                                     class="img-fluid rounded">
+                                                            {% else %}
+                                                                <div class="text-center text-muted">
+                                                                    <i class="fas fa-image fa-3x mb-3"></i>
+                                                                    <p>No image captured</p>
+                                                                </div>
+                                                            {% endif %}
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    {% if entry.notes %}
+                                                        <hr>
+                                                        <h6>Notes:</h6>
+                                                        <p class="text-muted">{{ entry.notes }}</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if logs.pages > 1 %}
+                            <div class="card-footer">
+                                <nav aria-label="Entry logs pagination">
+                                    <ul class="pagination justify-content-center mb-0">
+                                        {% if logs.has_prev %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('entry_logs', page=logs.prev_num) }}">
+                                                    <i class="fas fa-chevron-left"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        
+                                        {% for page_num in logs.iter_pages() %}
+                                            {% if page_num %}
+                                                {% if page_num != logs.page %}
+                                                    <li class="page-item">
+                                                        <a class="page-link" href="{{ url_for('entry_logs', page=page_num) }}">{{ page_num }}</a>
+                                                    </li>
+                                                {% else %}
+                                                    <li class="page-item active">
+                                                        <span class="page-link">{{ page_num }}</span>
+                                                    </li>
+                                                {% endif %}
+                                            {% else %}
+                                                <li class="page-item disabled">
+                                                    <span class="page-link">...</span>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if logs.has_next %}
+                                            <li class="page-item">
+                                                <a class="page-link" href="{{ url_for('entry_logs', page=logs.next_num) }}">
+                                                    <i class="fas fa-chevron-right"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                </nav>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <!-- Empty State -->
+                        <div class="text-center py-5">
+                            <i class="fas fa-clipboard fa-5x text-muted mb-4"></i>
+                            <h3>No Entry Logs Found</h3>
+                            <p class="text-muted mb-4">Start monitoring to see entry logs appear here</p>
+                            <a href="{{ url_for('index') }}" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Start Monitoring
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-image me-2"></i>Captured Image
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="modalImage" src="" alt="Captured Image" class="img-fluid rounded">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .entry-row {
+        transition: all 0.3s ease;
+    }
+
+    .entry-row:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .progress {
+        background-color: #e9ecef;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    .table-success {
+        --bs-table-bg: rgba(40, 167, 69, 0.1);
+    }
+
+    .table-warning {
+        --bs-table-bg: rgba(255, 193, 7, 0.1);
+    }
+
+    .page-link {
+        color: var(--primary-color);
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function viewImage(imagePath) {
+        document.getElementById('modalImage').src = `/static/${imagePath.replace('static/', '')}`;
+        const imageModal = new bootstrap.Modal(document.getElementById('imageModal'));
+        imageModal.show();
+    }
+
+    function exportLogs() {
+        // Implement export functionality
+        alert('Export functionality will be implemented');
+    }
+
+    function refreshLogs() {
+        location.reload();
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        // Only refresh if no modals are open
+        if (!document.querySelector('.modal.show')) {
+            location.reload();
+        }
+    }, 30000);
+
+    // Set default date values
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateFrom = document.getElementById('date_from');
+        const dateTo = document.getElementById('date_to');
+        
+        if (!dateFrom.value) {
+            const today = new Date();
+            const lastWeek = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+            dateFrom.value = lastWeek.toISOString().split('T')[0];
+        }
+        
+        if (!dateTo.value) {
+            const today = new Date();
+            dateTo.value = today.toISOString().split('T')[0];
+        }
+    });
+</script>
+{% endblock %}

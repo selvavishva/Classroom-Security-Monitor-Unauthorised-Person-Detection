@@ -1,0 +1,537 @@
+{% extends "base.html" %}
+
+{% block title %}System Alerts - AI Classroom Entry Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        System Alerts
+                    </h1>
+                    <p class="text-muted">Monitor security alerts and system notifications</p>
+                </div>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success" onclick="resolveAllAlerts()">
+                        <i class="fas fa-check-double me-2"></i>Resolve All
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="refreshAlerts()">
+                        <i class="fas fa-sync me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Statistics -->
+    <div class="row mb-4">
+        {% set high_alerts = alerts | selectattr('severity', 'equalto', 'high') | selectattr('is_resolved', 'equalto', False) | list %}
+        {% set medium_alerts = alerts | selectattr('severity', 'equalto', 'medium') | selectattr('is_resolved', 'equalto', False) | list %}
+        {% set low_alerts = alerts | selectattr('severity', 'equalto', 'low') | selectattr('is_resolved', 'equalto', False) | list %}
+        {% set resolved_alerts = alerts | selectattr('is_resolved', 'equalto', True) | list %}
+
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                    <h3>{{ high_alerts | length }}</h3>
+                    <p class="mb-0">High Priority</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white" style="background: linear-gradient(135deg, #f39c12 0%, #d68910 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                    <h3>{{ medium_alerts | length }}</h3>
+                    <p class="mb-0">Medium Priority</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white" style="background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-info-circle fa-2x mb-2"></i>
+                    <h3>{{ low_alerts | length }}</h3>
+                    <p class="mb-0">Low Priority</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card text-white" style="background: linear-gradient(135deg, #27ae60 0%, #219a52 100%);">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                    <h3>{{ resolved_alerts | length }}</h3>
+                    <p class="mb-0">Resolved</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn btn-outline-primary filter-btn active" data-filter="all">
+                            <i class="fas fa-list me-1"></i>All Alerts
+                        </button>
+                        <button class="btn btn-outline-danger filter-btn" data-filter="high">
+                            <i class="fas fa-exclamation-circle me-1"></i>High Priority
+                        </button>
+                        <button class="btn btn-outline-warning filter-btn" data-filter="medium">
+                            <i class="fas fa-exclamation-triangle me-1"></i>Medium Priority
+                        </button>
+                        <button class="btn btn-outline-info filter-btn" data-filter="low">
+                            <i class="fas fa-info-circle me-1"></i>Low Priority
+                        </button>
+                        <button class="btn btn-outline-success filter-btn" data-filter="resolved">
+                            <i class="fas fa-check-circle me-1"></i>Resolved
+                        </button>
+                        <button class="btn btn-outline-secondary filter-btn" data-filter="unresolved">
+                            <i class="fas fa-clock me-1"></i>Unresolved
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerts List -->
+    <div class="row">
+        <div class="col-12">
+            {% if alerts %}
+                <div id="alerts-container">
+                    {% for alert in alerts %}
+                    <div class="card alert-card mb-3 fade-in" 
+                         data-severity="{{ alert.severity }}" 
+                         data-resolved="{{ alert.is_resolved | lower }}"
+                         data-type="{{ alert.alert_type }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <!-- Alert Icon -->
+                                        {% if alert.severity == 'high' %}
+                                            <i class="fas fa-exclamation-circle text-danger fa-lg me-2"></i>
+                                        {% elif alert.severity == 'medium' %}
+                                            <i class="fas fa-exclamation-triangle text-warning fa-lg me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-info-circle text-info fa-lg me-2"></i>
+                                        {% endif %}
+
+                                        <!-- Alert Title -->
+                                        <h5 class="mb-0">
+                                            {{ alert.alert_type.replace('_', ' ').title() }}
+                                        </h5>
+
+                                        <!-- Severity Badge -->
+                                        <span class="badge ms-2 {{ 'bg-danger' if alert.severity == 'high' else 'bg-warning' if alert.severity == 'medium' else 'bg-info' }}">
+                                            {{ alert.severity.title() }}
+                                        </span>
+
+                                        <!-- Status Badge -->
+                                        {% if alert.is_resolved %}
+                                            <span class="badge bg-success ms-1">
+                                                <i class="fas fa-check me-1"></i>Resolved
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-secondary ms-1">
+                                                <i class="fas fa-clock me-1"></i>Active
+                                            </span>
+                                        {% endif %}
+                                    </div>
+
+                                    <!-- Alert Message -->
+                                    <p class="text-muted mb-2">{{ alert.message }}</p>
+
+                                    <!-- Alert Metadata -->
+                                    <div class="small text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        Created: {{ alert.created_at.strftime('%B %d, %Y at %H:%M:%S') if alert.created_at else 'N/A' }}
+                                        
+                                        {% if alert.resolved_at %}
+                                            <span class="ms-3">
+                                                <i class="fas fa-check me-1"></i>
+                                                Resolved: {{ alert.resolved_at.strftime('%B %d, %Y at %H:%M:%S') }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Alert Actions -->
+                                <div class="d-flex flex-column gap-2">
+                                    {% if not alert.is_resolved %}
+                                        <button type="button" 
+                                                class="btn btn-success btn-sm resolve-alert-btn" 
+                                                data-alert-id="{{ alert.id }}"
+                                                title="Resolve Alert">
+                                            <i class="fas fa-check me-1"></i>Resolve
+                                        </button>
+                                    {% endif %}
+                                    
+                                    <button type="button" 
+                                            class="btn btn-outline-primary btn-sm" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#alertModal{{ alert.id }}"
+                                            title="View Details">
+                                        <i class="fas fa-eye me-1"></i>Details
+                                    </button>
+                                    
+                                    {% if alert.image_path %}
+                                        <button type="button" 
+                                                class="btn btn-outline-info btn-sm"
+                                                onclick="viewAlertImage('{{ alert.image_path }}')"
+                                                title="View Image">
+                                            <i class="fas fa-image me-1"></i>Image
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alert Detail Modal -->
+                    <div class="modal fade" id="alertModal{{ alert.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Alert Details
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row">
+                                        <div class="col-md-8">
+                                            <dl class="row">
+                                                <dt class="col-sm-4">Alert Type:</dt>
+                                                <dd class="col-sm-8">{{ alert.alert_type.replace('_', ' ').title() }}</dd>
+                                                
+                                                <dt class="col-sm-4">Severity:</dt>
+                                                <dd class="col-sm-8">
+                                                    <span class="badge {{ 'bg-danger' if alert.severity == 'high' else 'bg-warning' if alert.severity == 'medium' else 'bg-info' }}">
+                                                        {{ alert.severity.title() }}
+                                                    </span>
+                                                </dd>
+                                                
+                                                <dt class="col-sm-4">Status:</dt>
+                                                <dd class="col-sm-8">
+                                                    {% if alert.is_resolved %}
+                                                        <span class="badge bg-success">Resolved</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Active</span>
+                                                    {% endif %}
+                                                </dd>
+                                                
+                                                <dt class="col-sm-4">Created:</dt>
+                                                <dd class="col-sm-8">{{ alert.created_at.strftime('%B %d, %Y at %H:%M:%S') if alert.created_at else 'N/A' }}</dd>
+                                                
+                                                {% if alert.resolved_at %}
+                                                <dt class="col-sm-4">Resolved:</dt>
+                                                <dd class="col-sm-8">{{ alert.resolved_at.strftime('%B %d, %Y at %H:%M:%S') }}</dd>
+                                                {% endif %}
+                                            </dl>
+                                            
+                                            <h6>Message:</h6>
+                                            <p class="text-muted">{{ alert.message }}</p>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            {% if alert.image_path %}
+                                                <h6>Associated Image:</h6>
+                                                <img src="{{ url_for('static', filename=alert.image_path.replace('static/', '')) }}" 
+                                                     alt="Alert Image" 
+                                                     class="img-fluid rounded">
+                                            {% else %}
+                                                <div class="text-center text-muted">
+                                                    <i class="fas fa-image fa-3x mb-3"></i>
+                                                    <p>No image associated</p>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    {% if not alert.is_resolved %}
+                                        <button type="button" 
+                                                class="btn btn-success resolve-alert-btn" 
+                                                data-alert-id="{{ alert.id }}">
+                                            <i class="fas fa-check me-1"></i>Resolve Alert
+                                        </button>
+                                    {% endif %}
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Empty State -->
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-shield-alt fa-5x text-success mb-4"></i>
+                        <h3>No System Alerts</h3>
+                        <p class="text-muted mb-4">Your system is running smoothly with no active alerts</p>
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Image Viewer Modal -->
+<div class="modal fade" id="alertImageModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-image me-2"></i>Alert Image
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="alertModalImage" src="" alt="Alert Image" class="img-fluid rounded">
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .alert-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+    }
+
+    .alert-card[data-severity="high"] {
+        border-left-color: #e74c3c;
+    }
+
+    .alert-card[data-severity="medium"] {
+        border-left-color: #f39c12;
+    }
+
+    .alert-card[data-severity="low"] {
+        border-left-color: #3498db;
+    }
+
+    .alert-card[data-resolved="true"] {
+        opacity: 0.7;
+        border-left-color: #27ae60;
+    }
+
+    .alert-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .filter-btn {
+        transition: all 0.3s ease;
+    }
+
+    .filter-btn.active {
+        background-color: var(--primary-color);
+        color: white;
+        border-color: var(--primary-color);
+    }
+
+    .resolve-alert-btn {
+        transition: all 0.3s ease;
+    }
+
+    .resolve-alert-btn:hover {
+        transform: scale(1.05);
+    }
+
+    .hidden {
+        display: none !important;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Filter functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const alertCards = document.querySelectorAll('.alert-card');
+
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                filterBtns.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+
+                const filter = this.dataset.filter;
+                
+                alertCards.forEach(card => {
+                    const severity = card.dataset.severity;
+                    const resolved = card.dataset.resolved === 'true';
+                    
+                    let show = false;
+                    
+                    switch(filter) {
+                        case 'all':
+                            show = true;
+                            break;
+                        case 'high':
+                            show = severity === 'high' && !resolved;
+                            break;
+                        case 'medium':
+                            show = severity === 'medium' && !resolved;
+                            break;
+                        case 'low':
+                            show = severity === 'low' && !resolved;
+                            break;
+                        case 'resolved':
+                            show = resolved;
+                            break;
+                        case 'unresolved':
+                            show = !resolved;
+                            break;
+                    }
+                    
+                    if (show) {
+                        card.classList.remove('hidden');
+                        card.style.display = 'block';
+                    } else {
+                        card.classList.add('hidden');
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    });
+
+    // Resolve alert functionality
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.resolve-alert-btn')) {
+            const btn = e.target.closest('.resolve-alert-btn');
+            const alertId = btn.dataset.alertId;
+            
+            // Show loading state
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Resolving...';
+            btn.disabled = true;
+            
+            fetch(`/resolve_alert/${alertId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        showAlert('success', 'Alert resolved successfully');
+                        
+                        // Update the card
+                        const card = btn.closest('.alert-card');
+                        card.dataset.resolved = 'true';
+                        
+                        // Add resolved badge
+                        const statusArea = card.querySelector('.badge.bg-secondary');
+                        if (statusArea) {
+                            statusArea.className = 'badge bg-success ms-1';
+                            statusArea.innerHTML = '<i class="fas fa-check me-1"></i>Resolved';
+                        }
+                        
+                        // Remove resolve buttons
+                        const resolveBtns = card.querySelectorAll('.resolve-alert-btn');
+                        resolveBtns.forEach(btn => btn.remove());
+                        
+                        // Close any open modals
+                        const modals = document.querySelectorAll('.modal.show');
+                        modals.forEach(modal => {
+                            const modalInstance = bootstrap.Modal.getInstance(modal);
+                            if (modalInstance) modalInstance.hide();
+                        });
+                        
+                    } else {
+                        showAlert('danger', data.message || 'Failed to resolve alert');
+                        btn.innerHTML = originalContent;
+                        btn.disabled = false;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showAlert('danger', 'Failed to resolve alert');
+                    btn.innerHTML = originalContent;
+                    btn.disabled = false;
+                });
+        }
+    });
+
+    function resolveAllAlerts() {
+        if (!confirm('Are you sure you want to resolve all active alerts?')) {
+            return;
+        }
+        
+        const unresolvedCards = document.querySelectorAll('.alert-card[data-resolved="false"]');
+        const alertIds = Array.from(unresolvedCards).map(card => 
+            card.querySelector('.resolve-alert-btn')?.dataset.alertId
+        ).filter(id => id);
+        
+        if (alertIds.length === 0) {
+            showAlert('info', 'No active alerts to resolve');
+            return;
+        }
+        
+        // Resolve each alert
+        Promise.all(alertIds.map(id => 
+            fetch(`/resolve_alert/${id}`, { method: 'POST' })
+        )).then(() => {
+            showAlert('success', `Resolved ${alertIds.length} alerts`);
+            setTimeout(() => location.reload(), 2000);
+        }).catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'Failed to resolve some alerts');
+        });
+    }
+
+    function refreshAlerts() {
+        location.reload();
+    }
+
+    function viewAlertImage(imagePath) {
+        document.getElementById('alertModalImage').src = `/static/${imagePath.replace('static/', '')}`;
+        const imageModal = new bootstrap.Modal(document.getElementById('alertImageModal'));
+        imageModal.show();
+    }
+
+    function showAlert(type, message) {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.container-fluid').firstChild);
+        
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.querySelector('.btn-close').click();
+            }
+        }, 5000);
+    }
+
+    // Auto-refresh every 30 seconds
+    setInterval(function() {
+        if (!document.querySelector('.modal.show')) {
+            location.reload();
+        }
+    }, 30000);
+</script>
+{% endblock %}

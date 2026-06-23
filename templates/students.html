@@ -1,0 +1,305 @@
+{% extends "base.html" %}
+
+{% block title %}Students - AI Classroom Entry Monitor{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        Student Management
+                    </h1>
+                    <p class="text-muted">Manage registered students and their face profiles</p>
+                </div>
+                <a href="{{ url_for('add_student') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Add New Student
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Grid -->
+    {% if students %}
+        <div class="row">
+            {% for student in students %}
+            <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+                <div class="card student-card fade-in">
+                    <div class="card-body text-center">
+                        <!-- Student Photo -->
+                        <div class="student-photo mb-3">
+                            {% if student.photo_path %}
+                                <img src="{{ url_for('static', filename=student.photo_path.replace('static/', '')) }}" 
+                                     alt="{{ student.name }}" 
+                                     class="rounded-circle"
+                                     style="width: 120px; height: 120px; object-fit: cover; border: 4px solid #e9ecef;">
+                            {% else %}
+                                <div class="rounded-circle bg-light d-flex align-items-center justify-content-center" 
+                                     style="width: 120px; height: 120px; border: 4px solid #e9ecef;">
+                                    <i class="fas fa-user fa-3x text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Student Info -->
+                        <h5 class="card-title mb-1">{{ student.name }}</h5>
+                        <p class="text-muted mb-2">ID: {{ student.student_id }}</p>
+                        
+                        {% if student.email %}
+                            <p class="small text-muted mb-1">
+                                <i class="fas fa-envelope me-1"></i>{{ student.email }}
+                            </p>
+                        {% endif %}
+                        
+                        {% if student.phone %}
+                            <p class="small text-muted mb-3">
+                                <i class="fas fa-phone me-1"></i>{{ student.phone }}
+                            </p>
+                        {% endif %}
+
+                        <!-- Status Badge -->
+                        <div class="mb-3">
+                            {% if student.face_encoding %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>Face Profile Ready
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning">
+                                    <i class="fas fa-exclamation me-1"></i>Face Profile Pending
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" 
+                                    class="btn btn-outline-primary btn-sm" 
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#studentModal{{ student.id }}">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-secondary btn-sm"
+                                    onclick="editStudent({{ student.id }})">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" 
+                                    class="btn btn-outline-danger btn-sm"
+                                    onclick="deleteStudent({{ student.id }}, '{{ student.name }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Detail Modal -->
+            <div class="modal fade" id="studentModal{{ student.id }}" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">
+                                <i class="fas fa-user me-2"></i>{{ student.name }}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    {% if student.photo_path %}
+                                        <img src="{{ url_for('static', filename=student.photo_path.replace('static/', '')) }}" 
+                                             alt="{{ student.name }}" 
+                                             class="img-fluid rounded">
+                                    {% else %}
+                                        <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                             style="height: 300px;">
+                                            <i class="fas fa-user fa-5x text-muted"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <dl class="row">
+                                        <dt class="col-sm-4">Student ID:</dt>
+                                        <dd class="col-sm-8">{{ student.student_id }}</dd>
+                                        
+                                        <dt class="col-sm-4">Email:</dt>
+                                        <dd class="col-sm-8">{{ student.email or 'Not provided' }}</dd>
+                                        
+                                        <dt class="col-sm-4">Phone:</dt>
+                                        <dd class="col-sm-8">{{ student.phone or 'Not provided' }}</dd>
+                                        
+                                        <dt class="col-sm-4">Registered:</dt>
+                                        <dd class="col-sm-8">{{ student.created_at.strftime('%B %d, %Y') if student.created_at else 'N/A' }}</dd>
+                                        
+                                        <dt class="col-sm-4">Face Profile:</dt>
+                                        <dd class="col-sm-8">
+                                            {% if student.face_encoding %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                        </dd>
+                                    </dl>
+
+                                    <!-- Recent Entries -->
+                                    <h6>Recent Entries</h6>
+                                    {% set recent_entries = student.entry_logs[-5:] %}
+                                    {% if recent_entries %}
+                                        <div class="table-responsive">
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Time</th>
+                                                        <th>Confidence</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for entry in recent_entries %}
+                                                    <tr>
+                                                        <td>{{ entry.entry_time.strftime('%m/%d') if entry.entry_time else 'N/A' }}</td>
+                                                        <td>{{ entry.entry_time.strftime('%H:%M') if entry.entry_time else 'N/A' }}</td>
+                                                        <td>
+                                                            {% if entry.confidence_score %}
+                                                                {{ "%.1f"|format(entry.confidence_score * 100) }}%
+                                                            {% else %}
+                                                                N/A
+                                                            {% endif %}
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted small">No recent entries</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-users fa-5x text-muted mb-4"></i>
+                        <h3>No Students Registered</h3>
+                        <p class="text-muted mb-4">Get started by adding your first student to the system</p>
+                        <a href="{{ url_for('add_student') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Add First Student
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-danger me-2"></i>
+                    Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to remove <strong id="studentNameToDelete"></strong> from the system?</p>
+                <p class="text-muted small">This action will deactivate the student but preserve their entry history.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-1"></i>Delete Student
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-card {
+        transition: all 0.3s ease;
+        border: none;
+        border-radius: 15px;
+    }
+
+    .student-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    }
+
+    .student-photo img {
+        transition: all 0.3s ease;
+    }
+
+    .student-photo:hover img {
+        transform: scale(1.05);
+    }
+
+    .btn-group .btn {
+        border-radius: 0;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function deleteStudent(studentId, studentName) {
+        document.getElementById('studentNameToDelete').textContent = studentName;
+        document.getElementById('deleteForm').action = `/delete_student/${studentId}`;
+        
+        const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        deleteModal.show();
+    }
+
+    function editStudent(studentId) {
+        // For now, redirect to add student page
+        // In the future, this could open an edit modal
+        window.location.href = '/add_student';
+    }
+
+    // Add loading state to action buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.btn-outline-danger')) {
+            const btn = e.target.closest('.btn-outline-danger');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+        }
+    });
+
+    // Stagger animations for cards
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.student-card');
+        cards.forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+        });
+    });
+</script>
+{% endblock %}

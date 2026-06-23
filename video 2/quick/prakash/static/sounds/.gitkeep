@@ -1,0 +1,3 @@
+# This file intentionally left empty.
+# Alarm sound file (alarm.mp3) should be placed in this directory.
+# The alarm system will use a system beep fallback if this file is not present.
