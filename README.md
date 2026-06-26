@@ -129,7 +129,7 @@ http://localhost:5000
 
 **Selva Vishva M**
 
-- LinkedIn: https://linkedin.com/in/your-profile
+- LinkedIn:(https://www.linkedin.com/in/selva-vishva-m)
 - GitHub: https://github.com/selvavishva
 
 ---
