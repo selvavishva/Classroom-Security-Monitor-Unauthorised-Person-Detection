@@ -355,4 +355,5 @@ For support and questions:
 ---
 
 **Made with ❤️ for classroom security and student safety**#   C l a s s r o o m - S e c u r i t y - M o n i t o r - U n a u t h o r i s e d - P e r s o n - D e t e c t i o n  
+ #   C l a s s r o o m - S e c u r i t y - M o n i t o r - U n a u t h o r i s e d - P e r s o n - D e t e c t i o n  
  
